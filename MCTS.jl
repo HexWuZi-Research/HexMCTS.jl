@@ -27,7 +27,7 @@ function check_single(line::Vector{Int64})
     return 0
 end
 
-function checkadjacent(board::Matrix{Int64}, pos::Action)
+function check_adjacent(board::Matrix{Int64}, pos::Action)
     x, y = pos
     if x != 1 && board[x-1, y] in (-1, 1)
         return true
@@ -45,6 +45,32 @@ function checkadjacent(board::Matrix{Int64}, pos::Action)
         return true
     end
     if x != 11 && y != 11 && board[x+1, y+1] in (-1, 1)
+        return true
+    end
+    return false
+end
+
+function check_adjacent2(board::Matrix{Int64}, pos::Action)
+    if check_adjacent(board, pos)
+        return true
+    end
+    x, y = pos
+    if x > 2 && board[x-2, y] in (-1, 1)
+        return true
+    end
+    if y > 2 && board[x, y-2] in (-1, 1)
+        return true
+    end
+    if x > 2 && y > 2 && board[x-2, y-2] in (-1, 1)
+        return true
+    end
+    if y < 10 && board[x, y+2] in (-1, 1)
+        return true
+    end
+    if x < 10 && board[x+2, y] in (-1, 1)
+        return true
+    end
+    if x < 10 && y < 10 && board[x+2, y+2] in (-1, 1)
         return true
     end
     return false
@@ -105,14 +131,14 @@ function get_actions(state::HexState)
     actions = Action[]
     for i in 1:6
         for j in 1:i+5
-            if state.board[i, j] == 0 && checkadjacent(state.board, (i, j))
+            if state.board[i, j] == 0 && check_adjacent2(state.board, (i, j))
                 push!(actions, (i, j))
             end
         end
     end
     for i in 7:11
         for j in i-5:11
-            if state.board[i, j] == 0 && checkadjacent(state.board, (i, j))
+            if state.board[i, j] == 0 && check_adjacent2(state.board, (i, j))
                 push!(actions, (i, j))
             end
         end
@@ -224,7 +250,7 @@ mutable struct MCTS
     rollout::Function
     root::Union{TreeNode,Nothing}
     our_action::Union{Action,Nothing}
-    function MCTS(; time_limit::Real=5, T::Float64=1/√2, rollout_method::Function=random_rollout)
+    function MCTS(; time_limit::Real=5, T::Float64=1 / √2, rollout_method::Function=random_rollout)
         new(time_limit, T, rollout_method, nothing, nothing)
     end
 end

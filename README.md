@@ -37,6 +37,10 @@ pip install julia
 
 | Version           | Perfomance(times of simulation in 5 seconds) |
 | ----------------- | -------------------------------------------- |
-| Pure Python       | 800-900                                      |
+| "Pure Python"     | 800-900                                      |
 | Python with Numba | 8k-9k                                        |
 | Pure Julia        | 35k-40k                                      |
+
+> Why there is quotation mark around "Pure Python"?
+> 
+> Because if you use NumPy, then it's not pure any more since NumPy is written in C.
