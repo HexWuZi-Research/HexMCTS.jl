@@ -80,16 +80,16 @@ function check(board::Matrix{Int64}, action::Union{Action,Nothing}=nothing)
             end
         end
     else
-        i,j = action
-        winner = check_single(i<= 6 ? board[i, 1:i+5] : board[i, i-5:11])
+        i, j = action
+        winner = check_single(i <= 6 ? board[i, 1:i+5] : board[i, i-5:11])
         if winner != 0
             return winner, true
         end
-        winner = check_single(i<= 6 ? board[i, 1:i+5] : board[i, i-5:11])
+        winner = check_single(j <= 6 ? board[1:j+5, j] : board[j-5:11, j])
         if winner != 0
             return winner, true
         end
-        winner = check_single(diag(board, j-i))
+        winner = check_single(diag(board, j - i))
         if winner != 0
             return winner, true
         end
@@ -142,6 +142,7 @@ function random_rollout(state::HexState)
         gameover, winner = is_terminal(state, action)
         if gameover
             return depth_reward(winner, state.board)
+            # return float(winner)
         end
         action = rand(get_actions(state))
         state = take_action(state, action)
@@ -200,7 +201,12 @@ end
 function expand!(node::TreeNode)
     action = pop!(node.untried_actions)
     child = TreeNode(take_action(node.state, action), node, action)
-    node.children[action] = child
+    if child.terminal
+        node.children = Dict(action => child)
+        node.untried_actions = Action[]
+    else
+        node.children[action] = child
+    end
     return child
 end
 
@@ -218,7 +224,7 @@ mutable struct MCTS
     rollout::Function
     root::Union{TreeNode,Nothing}
     our_action::Union{Action,Nothing}
-    function MCTS(; time_limit::Real=5, T::Float64=1 / √2, rollout_method::Function=random_rollout)
+    function MCTS(; time_limit::Real=5, T::Float64=1/√2, rollout_method::Function=random_rollout)
         new(time_limit, T, rollout_method, nothing, nothing)
     end
 end
@@ -232,7 +238,7 @@ function round!(self::MCTS)
     backpropogate!(node, reward)
 end
 
-function search!(self::MCTS, state::HexState; enemy_action::Union{Action,Nothing}=nothing, need_details=false)
+function search!(self::MCTS, state::HexState, enemy_action::Union{Action,Nothing}=nothing; need_details=false)
     inherited = false
     # ! try to utilize existed node in the tree
     if enemy_action !== nothing && self.root !== nothing
