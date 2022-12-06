@@ -1,5 +1,6 @@
 import sys
 import pygame
+import time
 import numpy as np
 from julia import Main as backend
 
@@ -156,24 +157,47 @@ def displayboard_people(you_are_black=False, time_limit=5):
             pygame.display.update()
             winner, gameover = backend.check(state.board)
             if gameover:
-                if winner == 1:
-                    print("You win!")
-                    return
+                if winner != 0:
+                    print(f"Player({winner}) win!")
+                    pygame.display.set_caption(f'HexWuZi(Player[{winner}] win!)')
+                else:
+                    print("Draw!")
+                    pygame.display.set_caption('HexWuZi(Draw!)')
                 break
             print("AI is searching...")
+            pygame.display.set_caption('HexWuZi(AI is searching...)')
             action, detail = backend.search_b(searcher, state, action, need_details=True)
+            pygame.display.set_caption('HexWuZi(Your turn)')
             print(state.player, action, detail)
             state = backend.take_action(state, action)
             display_board[1:, 1:] = state.board
             print(display_board)
+            for i in range(len(state.board)):
+                for j in range(len(state.board)):
+                    if state.board[i][j] == 1:
+                        pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
+                        pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
+                    if state.board[i][j] == -1:
+                        pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
+                        pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
+            pygame.display.update()
             winner, gameover = backend.check(state.board)
             if gameover:
-                if winner == -1:
-                    print("HaHaHaHaHaHaHaHaHaHa! You lose!\n"*5)
-                    return
+                if winner != 0:
+                    print(f"Player({winner}) win!")
+                    pygame.display.set_caption(f'HexWuZi(Player[{winner}] win!)')
+                else:
+                    print("Draw!")
+                    pygame.display.set_caption('HexWuZi(Draw!)')
                 break
 
-    return
+            
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            time.sleep(.1)
 
 def displayBoard():
     pygame.init()
@@ -224,6 +248,7 @@ def displayBoard():
 
         currentPlayer = state.player
         print(f"AI:{currentPlayer} is searching...")
+        pygame.display.set_caption(f'HexWuZi(AI[{currentPlayer}] is searching...)')
         action, detail = backend.search_b(searcher, state, need_details=True)
         print(action, detail)
         state = backend.take_action(state, action)
@@ -233,8 +258,17 @@ def displayBoard():
         if gameover:
             if winner == currentPlayer:
                 print(f"AI:{currentPlayer} win!")
-                return
+                pygame.display.set_caption(f'HexWuZi(Player[{currentPlayer}] win!)')
+            else:
+                print("Draw!")
+                pygame.display.set_caption('HexWuZi(Draw!)')
             break
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            time.sleep(.1)
 
 def main(you_are_black=False, opponent_name = None):
     if opponent_name == "self":
