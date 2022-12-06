@@ -6,6 +6,10 @@ This is a julia implementation of HexWuZi, including MCTS algorithm in julia and
 
 This julia version is much faster than `python with numba` version.
 
+## Play it
+
+GameUI.py is the main script of Game, just run it and enjoy the game. However, you should install all dependency first, please follow requirement section to install them well.
+
 ## Requirement
 
 ### Julia
