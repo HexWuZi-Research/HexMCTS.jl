@@ -27,7 +27,7 @@ function check_single(line::Vector{Int64})
     return 0
 end
 
-function checkadjacent(board::Matrix{Int64}, pos::Tuple{Int64,Int64})
+function checkadjacent(board::Matrix{Int64}, pos::Action)
     x, y = pos
     if x != 1 && board[x-1, y] in (-1, 1)
         return true
@@ -51,30 +51,45 @@ function checkadjacent(board::Matrix{Int64}, pos::Tuple{Int64,Int64})
 end
 
 function check(board::Matrix{Int64}, action::Union{Action,Nothing}=nothing)
-    # if action === nothing
-    # check if anybody win
-    for i in 1:6
-        winner = check_single(board[i, 1:i+5])
+    if action === nothing
+        # check if anybody win
+        for i in 1:6
+            winner = check_single(board[i, 1:i+5])
+            if winner != 0
+                return winner, true
+            end
+            winner = check_single(board[1:i+5, i])
+            if winner != 0
+                return winner, true
+            end
+        end
+        for i in 7:11
+            winner = check_single(board[i, i-5:11])
+            if winner != 0
+                return winner, true
+            end
+            winner = check_single(board[i-5:11, i])
+            if winner != 0
+                return winner, true
+            end
+        end
+        for k in -5:5
+            winner = check_single(diag(board, k))
+            if winner != 0
+                return winner, true
+            end
+        end
+    else
+        i,j = action
+        winner = check_single(i<= 6 ? board[i, 1:i+5] : board[i, i-5:11])
         if winner != 0
             return winner, true
         end
-        winner = check_single(board[1:i+5, i])
+        winner = check_single(i<= 6 ? board[i, 1:i+5] : board[i, i-5:11])
         if winner != 0
             return winner, true
         end
-    end
-    for i in 7:11
-        winner = check_single(board[i, i-5:11])
-        if winner != 0
-            return winner, true
-        end
-        winner = check_single(board[i-5:11, i])
-        if winner != 0
-            return winner, true
-        end
-    end
-    for k in -5:5
-        winner = check_single(diag(board, k))
+        winner = check_single(diag(board, j-i))
         if winner != 0
             return winner, true
         end
