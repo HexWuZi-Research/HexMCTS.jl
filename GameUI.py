@@ -115,7 +115,7 @@ def displayboard_people(you_are_black=False, time_limit=5):
 
         
         x,y = pygame.mouse.get_pos()
-        maybe_position = all_verts[0]
+        maybe_position = all_verts[60]
         for i in all_verts:
             if sum((i-np.array([x,y]))**2) < 500:
                 pygame.draw.circle(screen, "#808080",i, 18,1)
