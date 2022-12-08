@@ -4,7 +4,7 @@
 
 This is a julia implementation of HexWuZi, including MCTS algorithm in julia and GameUI in python.
 
-This julia version is much faster than `python with numba` version, see `Performance comparation of each version` section for more detail.
+This julia version is much faster than `python with numba` version, see `Performance comparison of each version` section for more detail.
 
 ## Play it
 
@@ -33,7 +33,7 @@ pip install julia
 
 > This is also used to commute between Python and Julia
 
-## Performance comparation of each version
+## Performance comparison of each version
 
 | Version           | Perfomance(times of simulation in 5 seconds) |
 | ----------------- | -------------------------------------------- |
