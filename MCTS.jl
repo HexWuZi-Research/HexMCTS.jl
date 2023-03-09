@@ -158,9 +158,7 @@ function is_terminal(state::HexState, action::Union{Action,Nothing}=nothing)
     return gameover, winner
 end
 
-function depth_reward(winner::Int64, board::Matrix{Int64})
-    return winner * 91 / (count(!=(0), board) - 30)
-end
+depth_reward(winner::Int64, board::Matrix{Int64}) = winner * 91 / (count(!=(0), board) - 30)
 
 function random_rollout(state::HexState)
     action = nothing
@@ -178,14 +176,13 @@ end
 mutable struct TreeNode
     state::HexState
     terminal::Bool
-    action::Union{Action,Nothing}
     parent::Union{TreeNode,Nothing}
     nvisit::Int64
     reward::Float64
     untried_actions::Vector{Action}
     children::Dict{Action,TreeNode}
     function TreeNode(state::HexState, parent::Union{TreeNode,Nothing}=nothing, action::Union{Action,Nothing}=nothing)
-        new(state, is_terminal(state, action)[1], action, parent, 0, 0.0, get_actions(state), Dict{Action,TreeNode}())
+        new(state, is_terminal(state, action)[1], parent, 0, 0.0, get_actions(state), Dict{Action,TreeNode}())
     end
 end
 
@@ -197,20 +194,22 @@ function uct(child::TreeNode, T::Float64)
     return parent.state.player * child.reward / child.nvisit + T * sqrt(2 * log(parent.nvisit) / child.nvisit)
 end
 
-function find_best_child(node::TreeNode, T::Float64)
+function find_best_action(node::TreeNode, T::Float64)
     best_value = -Inf
-    best_nodes = TreeNode[]
-    for child in values(node.children)
+    best_actions = Action[]
+    for (action, child) in node.children
         value = uct(child, T)
         if value > best_value
             best_value = value
-            best_nodes = [child]
+            best_actions = [action]
         elseif value == best_value
-            push!(best_nodes, child)
+            push!(best_actions, action)
         end
     end
-    return rand(best_nodes)
+    return rand(best_actions)
 end
+
+find_best_child(node::TreeNode, T::Float64) = node.children[find_best_action(node, T)]
 
 function select(node::TreeNode, T::Float64)
     while !node.terminal
@@ -282,9 +281,9 @@ function search!(self::MCTS, state::HexState, enemy_action::Union{Action,Nothing
         round!(self)
         excuted_times += 1
     end
-    best_child = find_best_child(self.root, 0.0)
-    self.our_action = best_child.action
+    self.our_action = find_best_action(self.root, 0.0)
     if need_details
+        best_child = self.root.children[self.our_action]
         return self.our_action, Dict(
             "use_existed_node" => inherited,
             "expected_reward" => best_child.reward / best_child.nvisit,
