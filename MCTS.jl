@@ -263,7 +263,7 @@ function round!(self::MCTS)
     backpropogate!(node, reward)
 end
 
-function search!(self::MCTS, state::HexState, enemy_action::Union{Action,Nothing}=nothing; need_details=false)
+function search!(self::MCTS, state::HexState, enemy_action::Union{Action,Nothing}=nothing; need_details=true)
     inherited = false
     # ! try to utilize existed node in the tree
     if enemy_action !== nothing && self.root !== nothing

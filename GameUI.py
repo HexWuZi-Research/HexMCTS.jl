@@ -2,20 +2,51 @@ import sys
 import pygame
 import time
 import numpy as np
-from julia import Main as backend
+import requests as req
+from argparse import ArgumentParser
+
+url = "http://127.0.0.1:8080"
+
+def parse_action(x,y):
+    return x+1,y+1
+
+class Game:
+    def __init__(self, you_are_black):
+        self.board = empty_broad.copy()
+        self.player = 1
+        self.new(you_are_black)
+
+    def new(self, you_are_black):
+        json = {"you_are_black": you_are_black}
+        res = req.post(f"{url}/new",json=json)
+        json = res.json()
+        self.id = json["id"]
+        if "action" in json:
+            self.take_action(json['action'])
+
+    def play(self, action):
+        json = {
+            "id" : self.id,
+            "action": list(action)
+        }
+        res = req.post(f"{url}/play",json=json)
+        json = res.json()
+        action = json.get("action", None)
+        if action:
+            self.take_action(action)
+        return json["gameover"],json["winner"], action
 
 
-backend.include("MCTS.jl")
-
+    def take_action(self, action):
+        i, j = action
+        self.board[i-1, j-1] = self.player
+        self.player *= -1
+        return self.board
 
 empty_broad = np.zeros([11, 11], dtype=np.int64)
 for i in range(11//2):
     empty_broad[i][11-(5-i):] = 10
     empty_broad[10-i][:5-i] = 10
-
-
-def parse_action(x,y):
-    return x+1,y+1
 
 
 def visual_coordinates():
@@ -74,14 +105,9 @@ def displayboard_people(you_are_black=False, time_limit=5):
     display_board = np.zeros((12, 12), dtype=int)
     display_board[0, 1:] = np.arange(0, 11)
     display_board[1:, 0] = np.arange(0, 11)
-    broad = empty_broad.copy()
-    state = backend.HexState(broad, 1)
-    if you_are_black:
-        action = parse_action(5,5)
-        state = backend.take_action(state,action)
-    display_board[1:, 1:] = broad
+    game = Game(you_are_black)
+    display_board[1:, 1:] = game.board
     print(display_board)
-    searcher = backend.MCTS(time_limit=time_limit)
 
     tim = 0
     flag=False
@@ -99,12 +125,12 @@ def displayboard_people(you_are_black=False, time_limit=5):
                 if sum((i-j)**2) < 3900:
                     pygame.draw.line(screen,line_color,i,j,2)
 
-        for i in range(len(state.board)):
-            for j in range(len(state.board)):
-                if state.board[i][j] == 1:
+        for i in range(len(game.board)):
+            for j in range(len(game.board)):
+                if game.board[i][j] == 1:
                     pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
                     pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
-                if state.board[i][j] == -1:
+                if game.board[i][j] == -1:
                     pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
                     pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
 
@@ -131,7 +157,7 @@ def displayboard_people(you_are_black=False, time_limit=5):
                 for j in range(len(verts[0])):
                     if verts[i,j][0] == maybe_position[0] and verts[i,j][1] == maybe_position[1]:
                         maybe_action = (i,j)
-            if state.board[maybe_action[0], maybe_action[1]] == 0:
+            if game.board[maybe_action[0], maybe_action[1]] == 0:
                 action = parse_action(*maybe_action)
                 validflag = True
 
@@ -142,46 +168,40 @@ def displayboard_people(you_are_black=False, time_limit=5):
             tim=0
 
         if validflag:
-            print(state.player, action)
-            state = backend.take_action(state, action)
-            display_board[1:, 1:] = state.board
+            print(game.player, action)
+            game.take_action(action)
+            display_board[1:, 1:] = game.board
             print(display_board)
-            for i in range(len(state.board)):
-                for j in range(len(state.board)):
-                    if state.board[i][j] == 1:
+            for i in range(len(game.board)):
+                for j in range(len(game.board)):
+                    if game.board[i][j] == 1:
                         pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
                         pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
-                    if state.board[i][j] == -1:
+                    if game.board[i][j] == -1:
                         pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
                         pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
             pygame.display.update()
-            winner, gameover = backend.check(state.board)
-            if gameover:
-                if winner != 0:
-                    print(f"Player({winner}) win!")
-                    pygame.display.set_caption(f'HexWuZi(Player[{winner}] win!)')
-                else:
-                    print("Draw!")
-                    pygame.display.set_caption('HexWuZi(Draw!)')
-                break
             print("AI is searching...")
             pygame.display.set_caption('HexWuZi(AI is searching...)')
-            action, detail = backend.search_b(searcher, state, action, need_details=True)
+            # state = backend.take_action(state, action)
+            # winner, gameover = backend.check(game.board)
+            # action, detail = backend.search_b(searcher, state, action, need_details=True)
+            # state = backend.take_action(state, action)
+            # winner, gameover = backend.check(game.board)
+            gameover, winner, action = game.play(action)
             pygame.display.set_caption('HexWuZi(Your turn)')
-            print(state.player, action, detail)
-            state = backend.take_action(state, action)
-            display_board[1:, 1:] = state.board
+            # print(game.player, action, detail)
+            display_board[1:, 1:] = game.board
             print(display_board)
-            for i in range(len(state.board)):
-                for j in range(len(state.board)):
-                    if state.board[i][j] == 1:
+            for i in range(len(game.board)):
+                for j in range(len(game.board)):
+                    if game.board[i][j] == 1:
                         pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
                         pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
-                    if state.board[i][j] == -1:
+                    if game.board[i][j] == -1:
                         pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
                         pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
             pygame.display.update()
-            winner, gameover = backend.check(state.board)
             if gameover:
                 if winner != 0:
                     print(f"Player({winner}) win!")
@@ -199,85 +219,88 @@ def displayboard_people(you_are_black=False, time_limit=5):
                 sys.exit()
             time.sleep(.1)
 
-def displayBoard():
-    pygame.init()
-    # 设置主屏窗口
-    screen = pygame.display.set_mode((640,560))
-    # 设置窗口的标题，即游戏名称
-    pygame.display.set_caption('HexWuZi')
-    verts = visual_coordinates()
-    all_verts = []
+# def displayBoard():
+#     pygame.init()
+#     # 设置主屏窗口
+#     screen = pygame.display.set_mode((640,560))
+#     # 设置窗口的标题，即游戏名称
+#     pygame.display.set_caption('HexWuZi')
+#     verts = visual_coordinates()
+#     all_verts = []
 
-    for i in verts:
-        for j in i:
-            all_verts.append(j)
+#     for i in verts:
+#         for j in i:
+#             all_verts.append(j)
 
-    screen_color= '#E7B941'
-    line_color = '#000000'
-    screen.fill(screen_color)
-    display_board = np.zeros((12, 12), dtype=int)
-    display_board[0, 1:] = np.arange(0, 11)
-    display_board[1:, 0] = np.arange(0, 11)
-    broad = empty_broad.copy()
-    broad[5, 5] = 1
-    state = backend.HexState(broad, -1)
-    display_board[1:, 1:] = broad
-    print(display_board)
-    searcher = backend.MCTS(time_limit=5)
+#     screen_color= '#E7B941'
+#     line_color = '#000000'
+#     screen.fill(screen_color)
+#     display_board = np.zeros((12, 12), dtype=int)
+#     display_board[0, 1:] = np.arange(0, 11)
+#     display_board[1:, 0] = np.arange(0, 11)
+#     broad = empty_broad.copy()
+#     broad[5, 5] = 1
+#     state = backend.HexState(broad, -1)
+#     display_board[1:, 1:] = broad
+#     print(display_board)
+#     searcher = backend.MCTS(time_limit=5)
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-        screen.fill(screen_color)
-        for i in all_verts:
-            for j in all_verts:
-                if sum((i-j)**2) < 3900:
-                    pygame.draw.line(screen,line_color,i,j,2)
+#     while True:
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 pygame.quit()
+#                 sys.exit()
+#         screen.fill(screen_color)
+#         for i in all_verts:
+#             for j in all_verts:
+#                 if sum((i-j)**2) < 3900:
+#                     pygame.draw.line(screen,line_color,i,j,2)
 
-        for i in range(len(state.board)):
-            for j in range(len(state.board)):
-                if state.board[i][j] == 1:
-                    pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
-                    pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
-                if state.board[i][j] == -1:
-                    pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
-                    pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
-        pygame.display.flip()
+#         for i in range(len(game.board)):
+#             for j in range(len(game.board)):
+#                 if game.board[i][j] == 1:
+#                     pygame.draw.circle(screen, "#000000",all_verts[11*i+j], 18,0)
+#                     pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
+#                 if game.board[i][j] == -1:
+#                     pygame.draw.circle(screen, "#FFFFFF",all_verts[11*i+j], 18,0)
+#                     pygame.draw.circle(screen, "#808080",all_verts[11*i+j], 18,1)
+#         pygame.display.flip()
 
-        currentPlayer = state.player
-        print(f"AI:{currentPlayer} is searching...")
-        pygame.display.set_caption(f'HexWuZi(AI[{currentPlayer}] is searching...)')
-        action, detail = backend.search_b(searcher, state, need_details=True)
-        print(action, detail)
-        state = backend.take_action(state, action)
-        display_board[1:, 1:] = state.board
-        print(display_board)
-        winner, gameover = backend.check(state.board)
-        if gameover:
-            if winner == currentPlayer:
-                print(f"AI:{currentPlayer} win!")
-                pygame.display.set_caption(f'HexWuZi(Player[{currentPlayer}] win!)')
-            else:
-                print("Draw!")
-                pygame.display.set_caption('HexWuZi(Draw!)')
-            break
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            time.sleep(.1)
+#         currentPlayer = game.player
+#         print(f"AI:{currentPlayer} is searching...")
+#         pygame.display.set_caption(f'HexWuZi(AI[{currentPlayer}] is searching...)')
+#         action, detail = backend.search_b(searcher, state, need_details=True)
+#         print(action, detail)
+#         state = backend.take_action(state, action)
+#         display_board[1:, 1:] = game.board
+#         print(display_board)
+#         winner, gameover = backend.check(game.board)
+#         if gameover:
+#             if winner == currentPlayer:
+#                 print(f"AI:{currentPlayer} win!")
+#                 pygame.display.set_caption(f'HexWuZi(Player[{currentPlayer}] win!)')
+#             else:
+#                 print("Draw!")
+#                 pygame.display.set_caption('HexWuZi(Draw!)')
+#             break
+#     while True:
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 pygame.quit()
+#                 sys.exit()
+#             time.sleep(.1)
 
-def main(you_are_black=False, opponent_name = None):
-    if opponent_name == "self":
-        displayBoard()        
-    else:
-        displayboard_people(you_are_black=you_are_black)
-        
-if __name__ == "__main__":
-    main(you_are_black=False)
+# def main(you_are_black=False, opponent_name = None):
+#     # if opponent_name == "self":
+#     #     displayBoard()        
+#     # else:
+#     displayboard_people(you_are_black=you_are_black)
+
+parser = ArgumentParser()
+parser.add_argument('-b', '--you_are_white',
+                    action='store_true')
+args = parser.parse_args()
+displayboard_people(you_are_black=(not args.you_are_white))
 
 
 
