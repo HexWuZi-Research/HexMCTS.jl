@@ -29,8 +29,8 @@ function kill!(game::Game)
     delete!(game_pool,game.id)
 end
 
-function play(game::Game, action::Action)
-    @info "Player played at $action)"
+function play!(game::Game, action::Action)
+    @info "Player played at $action"
     take_action!(game, action)
     winner, gameover = check(game.state.board, action)
     if gameover
@@ -54,7 +54,7 @@ end
     data = json(req)
     if haskey(data, "id") && haskey(game_pool, data["id"])
         game = game_pool[data["id"]]
-        return play(game, tuple(data["action"]...))
+        return play!(game, tuple(data["action"]...))
     end
     return Dict("msg" => "Error.")
 end
@@ -62,12 +62,21 @@ end
 @post "/new" function(req::HTTP.Request)
     data = json(req)
     game = Game()
-    if data["you_are_black"]
+    if !data["you_are_black"]
         action = (6,6)
-        game.state = take_action(game.state, action)
+        take_action!(game, action)
         return Dict("id" => game.id, "gameover" => false, "action" => collect(action))
     end
     Dict("id" => game.id, "gameover" => false)
+end
+
+@get "/kill" function(req::HTTP.Request)
+    data = queryparams(req)
+    if haskey(data, "id") && haskey(game_pool, data["id"])
+        kill!(game_pool[data["id"]])
+        return Dict("msg" => "Success.")
+    end
+    return Dict("msg" => "Error.")
 end
 
 # # start the web server
