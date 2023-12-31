@@ -1,5 +1,5 @@
 using Oxygen
-using HTTP
+import HTTP
 
 include("MCTS.jl")
 
@@ -11,9 +11,9 @@ mutable struct Game
     state::HexState
     ai::MCTS
     function Game()
-        state = HexState(copy(empty_board),1)
+        state = HexState(copy(empty_board), 1)
         global game_count += 1
-        game = new(game_count,state,MCTS())
+        game = new(game_count, state, MCTS())
         @info "Create Game[id=$(game.id)]"
         game_pool[game_count] = game
         return game
@@ -26,7 +26,7 @@ end
 
 function kill!(game::Game)
     @info "Delete Game[id=$(game.id)]"
-    delete!(game_pool,game.id)
+    delete!(game_pool, game.id)
 end
 
 function play!(game::Game, action::Action)
@@ -50,7 +50,7 @@ function play!(game::Game, action::Action)
     return Dict("gameover" => gameover, "winner" => winner, "action" => collect(action))
 end
 
-@post "/play" function(req::HTTP.Request)
+@post "/play" function (req::HTTP.Request)
     data = json(req)
     if haskey(data, "id") && haskey(game_pool, data["id"])
         game = game_pool[data["id"]]
@@ -59,18 +59,18 @@ end
     return Dict("msg" => "Error.")
 end
 
-@post "/new" function(req::HTTP.Request)
+@post "/new" function (req::HTTP.Request)
     data = json(req)
     game = Game()
     if !data["you_are_black"]
-        action = (6,6)
+        action = (6, 6)
         take_action!(game, action)
         return Dict("id" => game.id, "gameover" => false, "action" => collect(action))
     end
     Dict("id" => game.id, "gameover" => false)
 end
 
-@get "/kill" function(req::HTTP.Request)
+@get "/kill" function (req::HTTP.Request)
     data = queryparams(req)
     if haskey(data, "id") && haskey(game_pool, data["id"])
         kill!(game_pool[data["id"]])

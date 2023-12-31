@@ -1,9 +1,10 @@
 import sys
-import pygame
 import time
-import numpy as np
-import requests as req
 from argparse import ArgumentParser
+
+import numpy as np
+import pygame
+import requests as req
 
 url = "http://127.0.0.1:8080"
 
@@ -45,7 +46,7 @@ class Game:
         self.board[i-1, j-1] = self.player
         self.player *= -1
         return self.board
-    
+
     def quit(self):
         if self.gameover:
             return
